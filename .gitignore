@@ -14,3 +14,6 @@ keyword-tool/config.json
 # IDE
 .vscode/
 .idea/
+
+# Claude Code
+.claude/
