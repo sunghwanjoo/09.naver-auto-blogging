@@ -1,0 +1,7 @@
+flask
+requests
+selenium
+webdriver-manager
+pyperclip
+anthropic
+waitress
