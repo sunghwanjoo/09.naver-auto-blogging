@@ -23,6 +23,7 @@ import threading
 import webbrowser
 import uuid
 import requests
+from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, jsonify
 import anthropic
 import naver_bot
@@ -44,6 +45,9 @@ CUSTOMER_ID = '2071405'
 API_KEY = '010000000069aa1e72ec9c93499e21d65385abd10c747268db82462757fd989310e48a27a9'
 SECRET_KEY = 'AQAAAABpqh5y7JyTSZ4h1lOFq9EMWu086e2klJpIwe+VhCgeag=='
 BASE_URL = 'https://api.searchad.naver.com'
+
+NAVER_CLIENT_ID = 'p5_lbliQ3TbHdQvERlcJ'
+NAVER_CLIENT_SECRET = 'rJgAOskYL0'
 
 # 업로드 작업 상태 저장
 upload_status = {}
@@ -319,22 +323,18 @@ def upload_job_status(job_id):
 def jisikinn_search():
     data = request.json or {}
     keyword = data.get('keyword', '').strip()
-    client_id = data.get('client_id', '').strip()
-    client_secret = data.get('client_secret', '').strip()
     display = min(int(data.get('display', 20)), 100)
 
     if not keyword:
         return jsonify({'error': '키워드를 입력해주세요.'}), 400
-    if not client_id or not client_secret:
-        return jsonify({'error': '네이버 Client ID와 Client Secret을 입력해주세요.'}), 400
 
     try:
         resp = requests.get(
             'https://openapi.naver.com/v1/search/kin.json',
             params={'query': keyword, 'display': display, 'sort': 'date'},
             headers={
-                'X-Naver-Client-Id': client_id,
-                'X-Naver-Client-Secret': client_secret,
+                'X-Naver-Client-Id': NAVER_CLIENT_ID,
+                'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
             },
             timeout=10
         )
@@ -352,35 +352,82 @@ def jisikinn_search():
         return jsonify({'error': f'검색 오류: {str(e)}'}), 500
 
 
+# ─── 지식인 질문 전문 가져오기 ───────────────────────────────
+
+@app.route('/api/jisikinn/fetch_question', methods=['POST'])
+def fetch_question():
+    data = request.json or {}
+    url = data.get('url', '').strip()
+    if not url:
+        return jsonify({'error': 'URL을 입력해주세요.'}), 400
+
+    result = naver_bot.fetch_question_content(url)
+    if 'error' in result:
+        return jsonify({'error': f'페이지 로딩 오류: {result["error"]}'}), 500
+    if not result.get('title') and not result.get('body'):
+        return jsonify({'error': '질문 내용을 가져올 수 없습니다.'}), 400
+    return jsonify(result)
+
+
 # ─── AI 지식인 답변 생성 ─────────────────────────────────────
 
 @app.route('/api/jisikinn/generate', methods=['POST'])
 def jisikinn_generate():
     data = request.json or {}
     question = data.get('question', '').strip()
-    keywords = data.get('keywords', '').strip()
     api_key = data.get('api_key', '').strip()
-    style = data.get('style', '정보성')
+    answer_type = data.get('answer_type', 'blog')
+    link = data.get('link', '').strip()
 
     if not question:
         return jsonify({'error': '질문 내용을 입력해주세요.'}), 400
     if not api_key:
         return jsonify({'error': 'Claude API 키를 입력해주세요.'}), 400
+    if not link:
+        return jsonify({'error': '링크를 입력해주세요.'}), 400
 
-    prompt = f"""네이버 지식인에 올라온 질문에 대한 답변을 작성해주세요.
+    if answer_type == 'blog':
+        prompt = f"""너는 네이버 지식인에서 성실하게 답변하는 블로거야.
+아래 질문에 답변을 작성해줘.
 
 질문: {question}
-{"포함 키워드: " + keywords if keywords else ""}
-답변 스타일: {style}
 
-작성 조건:
-- 답변 길이는 300~600자 내외
-- 질문에 직접적으로 도움이 되는 실용적인 내용
-- 지식인 독자 친화적인 구어체
-- 필요시 번호 목록으로 구조화
-- 마지막에 자연스러운 마무리 한 줄
+[답변 전략]
+1. 질문자의 상황에 먼저 공감하는 한 줄로 시작
+2. 핵심 정보를 성실하게 제공 (300~400자)
+3. 마지막에 자연스럽게 블로그 링크 삽입
+   - 링크 앞 문장은 "더 자세한 내용은 제가 직접 정리해둔 글이 있으니 참고하세요 :)"처럼 부드럽게
+   - 링크: {link}
 
-답변 내용만 출력해주세요. 제목이나 추가 설명 없이 바로 답변 본문만 작성하세요."""
+[주의사항]
+- 광고처럼 보이면 절대 안 됨
+- 링크는 답변의 보너스처럼 자연스럽게
+- 구어체, 친근한 말투
+- 이모티콘(이모지) 절대 사용 금지
+- ** 같은 마크다운 기호 절대 사용 금지
+- 답변 본문만 출력 (제목, 설명 없이)"""
+
+    else:
+        prompt = f"""너는 네이버 지식인에서 제품을 직접 써본 경험자로서 답변하는 사람이야.
+아래 질문에 답변을 작성해줘.
+
+질문: {question}
+
+[답변 전략]
+1. 질문자의 고민에 공감하는 한 줄로 시작
+2. 제품 고를 때 봐야 할 기준을 성실하게 설명 (200~300자)
+3. 자연스럽게 "저도 이거 쓰는데" 식으로 경험담 연결
+4. 구매 링크를 편의 제공 느낌으로 삽입
+   - 예: "혹시 필요하시면 제가 쓰는 거 링크 남겨드릴게요"
+   - 링크: {link}
+
+[주의사항]
+- 절대 광고처럼 보이면 안 됨
+- 제품명 직접 언급보다 경험담 위주로
+- 구어체, 친근한 말투
+- 이모티콘(이모지) 절대 사용 금지
+- ** 같은 마크다운 기호 절대 사용 금지
+- 답변 본문만 출력 (제목, 설명 없이)"""
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
@@ -396,6 +443,36 @@ def jisikinn_generate():
         return jsonify({'error': 'API 키가 올바르지 않습니다.'}), 401
     except Exception as e:
         return jsonify({'error': f'생성 오류: {str(e)}'}), 500
+
+
+# ─── OG 미리보기 ──────────────────────────────────────────────
+@app.route('/api/og_preview', methods=['POST'])
+def og_preview():
+    data = request.json or {}
+    url = data.get('url', '').strip()
+    if not url:
+        return jsonify({'error': 'URL을 입력해주세요.'}), 400
+    try:
+        import requests as req
+        from bs4 import BeautifulSoup
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        r = req.get(url, headers=headers, timeout=8)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'html.parser')
+
+        def og(prop):
+            tag = soup.find('meta', property=f'og:{prop}') or soup.find('meta', attrs={'name': f'og:{prop}'})
+            return tag['content'].strip() if tag and tag.get('content') else ''
+
+        image = og('image')
+        title = og('title') or (soup.title.string.strip() if soup.title else '')
+        description = og('description')
+
+        return jsonify({'image': image, 'title': title, 'description': description})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ─── 지식인 업로드 ────────────────────────────────────────────

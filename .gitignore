@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Build artifacts
+keyword-tool/build/
+keyword-tool/dist/
+
+# Sensitive files
+keyword-tool/config.json
+중요_api key.txt
+
+# IDE
+.vscode/
+.idea/

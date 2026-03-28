@@ -353,3 +353,57 @@ def upload_jisikinn_answer(question_url, answer):
         except:
             pass
         return {'success': False, 'error': str(e)}
+
+
+def fetch_question_content(url):
+    """지식인 질문 페이지에서 제목과 본문 전문을 가져옴 (모바일 requests)"""
+    import re
+    import requests as req
+    from bs4 import BeautifulSoup
+
+    try:
+        # desktop URL에서 dirId, docId 추출 후 모바일 URL로 변환
+        dir_id = re.search(r'dirId=(\d+)', url)
+        doc_id = re.search(r'docId=(\d+)', url)
+        if not dir_id or not doc_id:
+            return {'error': 'URL에서 dirId/docId를 찾을 수 없습니다.'}
+
+        mobile_url = f"https://m.kin.naver.com/mobile/qna/detail.nhn?dirId={dir_id.group(1)}&docId={doc_id.group(1)}"
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+            'Accept-Language': 'ko-KR,ko;q=0.9',
+            'Referer': 'https://m.kin.naver.com/',
+        }
+        r = req.get(mobile_url, headers=headers, timeout=10)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'html.parser')
+
+        title = ''
+        body = ''
+
+        # 제목: QnaEnd_contentArea 안의 첫 번째 의미있는 텍스트
+        content_area = soup.find(class_=lambda c: c and any('contentArea' in x or 'titleArea' in x for x in c))
+        if content_area:
+            lines = [l.strip() for l in content_area.get_text('\n').split('\n') if l.strip()]
+            skip = {'Q&A', 'NEW', 'NAVER', '지식iN', '지식인', 'eXpert', '홈', 'CHOiCE', '답변하기'}
+            for line in lines:
+                if len(line) > 5 and line not in skip:
+                    title = line
+                    break
+
+        # 본문: [class*="questionDetail"] CSS 셀렉터
+        detail = soup.select_one('[class*="questionDetail"]')
+        if detail:
+            body = detail.get_text(separator='\n', strip=True)
+
+        # 제목 못 찾으면 <title> 태그 사용
+        if not title:
+            t = soup.find('title')
+            if t:
+                title = t.get_text(strip=True).replace('네이버 지식iN', '').strip()
+
+        return {'title': title, 'body': body}
+
+    except Exception as e:
+        return {'error': str(e)}

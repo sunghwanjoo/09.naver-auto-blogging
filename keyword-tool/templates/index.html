@@ -565,6 +565,8 @@
     .btn-done { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; padding: 5px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
     .btn-done:hover { background: #c8e6c9; }
     .btn-done.completed { background: #4caf50; color: #fff; border-color: #4caf50; cursor: default; }
+    .btn-write { background: #03c75a; color: #fff; border: none; padding: 5px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+    .btn-write:hover { background: #02a84a; }
     .j-result-info { font-size: 12px; color: #888; margin-top: 8px; }
 
     /* ── 반응형 ── */
@@ -579,14 +581,14 @@
 <header>
   <div class="header-top">네이버 블로그 툴</div>
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('keyword', this)">키워드 조회</button>
+    <button class="tab-btn" onclick="switchTab('keyword', this)">키워드 조회</button>
     <button class="tab-btn" onclick="switchTab('blog', this)">블로그 자동 글쓰기</button>
-    <button class="tab-btn" onclick="switchTab('jisikinn', this)">지식인 자동글쓰기</button>
+    <button class="tab-btn active" onclick="switchTab('jisikinn', this)">지식인 자동글쓰기</button>
   </div>
 </header>
 
 <!-- ═══════════ TAB 1: 키워드 조회 ═══════════ -->
-<div id="tab-keyword" class="tab-content active">
+<div id="tab-keyword" class="tab-content">
   <div class="keyword-wrap">
 
     <!-- 검색 입력 -->
@@ -753,7 +755,7 @@
 </div>
 
 <!-- ═══════════ TAB 3: 지식인 자동글쓰기 ═══════════ -->
-<div id="tab-jisikinn" class="tab-content">
+<div id="tab-jisikinn" class="tab-content active">
   <div class="container">
 
     <!-- STEP 1: 네이버 로그인 -->
@@ -793,21 +795,6 @@
         <span class="step-label">STEP 2</span> 지식인 질문 조회
       </div>
 
-      <div class="form-grid" style="margin-bottom:8px">
-        <div class="field">
-          <label>네이버 Client ID</label>
-          <input type="text" id="jClientId" placeholder="네이버 개발자센터 Client ID" autocomplete="off" />
-        </div>
-        <div class="field">
-          <label>네이버 Client Secret</label>
-          <input type="password" id="jClientSecret" placeholder="Client Secret" autocomplete="off" />
-        </div>
-      </div>
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
-        <button class="btn btn-gray" style="padding:6px 16px; font-size:12px" onclick="saveNaverConfig()">저장</button>
-        <span id="jConfigMsg" style="font-size:12px; color:#2e7d32; display:none">저장 완료</span>
-      </div>
-
       <div style="display:flex; gap:8px; margin-bottom:12px; align-items:center">
         <input type="text" id="jSearchKeyword" placeholder="키워드 입력 (예: 강아지 사료)" style="flex:1"
           onkeydown="if(event.key==='Enter') searchJisikinn()" />
@@ -828,7 +815,8 @@
             <thead><tr>
               <th style="width:36px">#</th>
               <th>질문 제목</th>
-              <th style="width:90px">작성일</th>
+              <th style="width:60px">링크</th>
+              <th style="width:70px">작성</th>
               <th style="width:70px">완료</th>
             </tr></thead>
             <tbody id="jTableBody"></tbody>
@@ -843,33 +831,33 @@
         <span class="step-label">STEP 3</span> AI 지식인 답변 생성
       </div>
 
-      <div class="api-key-row" style="margin-bottom:16px">
-        <div class="field">
-          <label>Claude API 키</label>
-          <input type="password" id="jClaudeApiKey" placeholder="sk-ant-..." autocomplete="off" />
+      <div class="field" style="margin-bottom:10px">
+        <label>질문 제목</label>
+        <input type="text" id="jQuestionTitle" placeholder="질문을 선택하면 자동으로 입력됩니다" readonly style="background:#f9f9f9; color:#555" />
+      </div>
+
+      <div class="field" style="margin-bottom:12px">
+        <label>질문 내용 <span id="jFetchStatus" style="font-size:12px; color:#03c75a; font-weight:400"></span></label>
+        <textarea id="jQuestion" placeholder="질문을 선택하면 전문이 자동으로 입력됩니다" style="min-height:100px; resize:vertical"></textarea>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px; font-weight:600; color:#444; display:block; margin-bottom:8px">답변 유형</label>
+        <div style="display:flex; gap:8px">
+          <button type="button" id="jTypeBlog" class="btn" onclick="setJType('blog')" style="flex:1">블로그 유도형</button>
+          <button type="button" id="jTypeProduct" class="btn btn-gray" onclick="setJType('product')" style="flex:1">제품 판매형</button>
         </div>
       </div>
 
-      <div class="form-grid" style="margin-bottom:12px">
-        <div class="field">
-          <label>질문 내용</label>
-          <input type="text" id="jQuestion" placeholder="예: 강아지 사료 추천해주세요" />
-        </div>
-        <div class="field">
-          <label>포함 키워드 (선택)</label>
-          <input type="text" id="jKeywords" placeholder="예: 소형견, 습식사료" />
-        </div>
-      </div>
-
-      <div class="form-grid" style="margin-bottom:16px">
-        <div class="field">
-          <label>답변 스타일</label>
-          <select id="jAnswerStyle">
-            <option value="정보성">정보성 (꼼꼼한 설명)</option>
-            <option value="친근한">친근한 (친근한 말투)</option>
-            <option value="전문가">전문가 (신뢰감 있는 답변)</option>
-            <option value="경험담">경험담 (직접 경험한 것처럼)</option>
-          </select>
+      <div class="field" style="margin-bottom:16px">
+        <label id="jLinkLabel">블로그 URL</label>
+        <input type="text" id="jCtrLink" placeholder="https://" oninput="onCtrLinkInput(this.value)" onpaste="setTimeout(()=>onCtrLinkInput(this.value),100)" />
+        <div id="ogPreviewCard" style="display:none; margin-top:10px; border:1px solid #dde3ea; border-radius:10px; overflow:hidden; background:#fff; flex-direction:row; max-height:100px">
+          <img id="ogPreviewImg" src="" alt="" style="width:100px; height:100px; object-fit:cover; flex-shrink:0" />
+          <div style="padding:10px 12px; overflow:hidden">
+            <div id="ogPreviewTitle" style="font-size:13px; font-weight:600; color:#222; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis"></div>
+            <div id="ogPreviewDesc" style="font-size:11px; color:#888; line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden"></div>
+          </div>
         </div>
       </div>
 
@@ -897,6 +885,8 @@
       <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap">
         <button class="btn" id="jUploadBtn" onclick="uploadJisikinn()">답변 등록</button>
         <button class="btn btn-gray" onclick="generateJisikinn()">다시 생성</button>
+        <button class="btn btn-gray" onclick="copyJAnswer()">답변 복사</button>
+        <button class="btn btn-gray" onclick="openQuestionLink()">질문 열기 ↗</button>
       </div>
 
       <div class="upload-progress" id="jUploadProgress">
@@ -921,7 +911,7 @@
     document.getElementById('tab-' + tab).classList.add('active');
     btn.classList.add('active');
     if (tab === 'blog') checkLoginStatus();
-    if (tab === 'jisikinn') { checkJLoginStatus(); loadNaverConfig(); }
+    if (tab === 'jisikinn') { checkJLoginStatus(); }
   }
 
   // ─── 세션 초기화: EXE 재실행 시 계획표 자동 초기화 ──────────
@@ -944,7 +934,25 @@
       localStorage.removeItem(PLAN_KEY);
     }
     renderPlan();
+
+    // Claude API 키 불러오기
+    try {
+      const cfgRes = await fetch('/api/config');
+      const cfg = await cfgRes.json();
+      if (cfg.claude_api_key) document.getElementById('claudeApiKey').value = cfg.claude_api_key;
+    } catch {}
   })();
+
+  // Claude API 키 입력 시 자동 저장
+  document.getElementById('claudeApiKey').addEventListener('change', async function() {
+    const key = this.value.trim();
+    if (!key) return;
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ claude_api_key: key })
+    });
+  });
 
   function loadPlan() {
     try { return JSON.parse(localStorage.getItem(PLAN_KEY) || '[]'); } catch { return []; }
@@ -1466,30 +1474,6 @@
 
   // ─── 설정 저장/불러오기 ──────────────────────────────────────
 
-  async function loadNaverConfig() {
-    try {
-      const res = await fetch('/api/config');
-      const data = await res.json();
-      if (data.naver_client_id) document.getElementById('jClientId').value = data.naver_client_id;
-      if (data.naver_client_secret) document.getElementById('jClientSecret').value = data.naver_client_secret;
-    } catch {}
-  }
-
-  async function saveNaverConfig() {
-    const client_id = document.getElementById('jClientId').value.trim();
-    const client_secret = document.getElementById('jClientSecret').value.trim();
-    try {
-      await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ naver_client_id: client_id, naver_client_secret: client_secret })
-      });
-      const msg = document.getElementById('jConfigMsg');
-      msg.style.display = 'inline';
-      setTimeout(() => { msg.style.display = 'none'; }, 2000);
-    } catch {}
-  }
-
   // ─── 지식인 탭: 질문 조회 ───────────────────────────────────
 
   const J_DONE_KEY = 'jisikinn_done_urls';
@@ -1503,12 +1487,9 @@
   }
 
   async function searchJisikinn() {
-    const client_id = document.getElementById('jClientId').value.trim();
-    const client_secret = document.getElementById('jClientSecret').value.trim();
     const keyword = document.getElementById('jSearchKeyword').value.trim();
     const display = document.getElementById('jDisplayCount').value;
 
-    if (!client_id || !client_secret) { showError('jSearchError', '네이버 Client ID와 Client Secret을 입력해주세요.'); return; }
     if (!keyword) { showError('jSearchError', '키워드를 입력해주세요.'); return; }
 
     const btn = document.getElementById('jSearchBtn');
@@ -1521,7 +1502,7 @@
       const res = await fetch('/api/jisikinn/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, client_id, client_secret, display: parseInt(display) })
+        body: JSON.stringify({ keyword, display: parseInt(display) })
       });
       let data;
       try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
@@ -1548,20 +1529,29 @@
       return;
     }
 
+    jItems = items;
+
     tbody.innerHTML = items.map((item, i) => {
       const isDone = done.has(item.link);
       const cleanTitle = item.title.replace(/<[^>]+>/g, '');
+      const cleanDesc = item.description ? item.description.replace(/<[^>]+>/g, '') : '';
       const date = item.pubDate ? item.pubDate.replace(/\s.*/, '') : '-';
       return `<tr class="${isDone ? 'j-done' : ''}" id="j-row-${i}">
         <td style="color:#aaa; font-size:12px">${i + 1}</td>
         <td>
-          <span class="q-title" onclick="selectJisikinnQuestion('${cleanTitle.replace(/'/g, "\\'")}', '${item.link}')">${cleanTitle}</span>
+          <span class="q-title">${cleanTitle}</span>
+          ${cleanDesc ? `<div style="color:#888; font-size:11px; margin-top:3px; line-height:1.4">${cleanDesc}</div>` : ''}
         </td>
-        <td style="color:#888; font-size:12px; white-space:nowrap">${date}</td>
+        <td style="text-align:center">
+          <a href="${item.link}" target="_blank" style="color:#03c75a; font-size:18px; text-decoration:none" title="질문 보기">↗</a>
+        </td>
+        <td style="text-align:center">
+          <button class="btn-write" onclick="selectJisikinnQuestion(${i})">작성</button>
+        </td>
         <td>
           <button class="btn-done ${isDone ? 'completed' : ''}" id="j-done-btn-${i}"
-            onclick="markJisikinnDone('${item.link}', ${i})" ${isDone ? 'disabled' : ''}>
-            ${isDone ? '완료' : '완료'}
+            onclick="markJisikinnDone('${item.link}', ${i})">
+            완료
           </button>
         </td>
       </tr>`;
@@ -1570,22 +1560,59 @@
     document.getElementById('jSearchResults').style.display = 'block';
   }
 
-  function selectJisikinnQuestion(title, url) {
-    document.getElementById('jQuestion').value = title;
-    document.getElementById('jQuestionUrl').value = url;
+  let jItems = [];
+
+  async function selectJisikinnQuestion(idx) {
+    const item = jItems[idx];
+    const title = item.title.replace(/<[^>]+>/g, '');
+
+    document.getElementById('jQuestionTitle').value = title;
+    document.getElementById('jQuestion').value = '';
+    document.getElementById('jFetchStatus').textContent = '전문 불러오는 중...';
+    document.getElementById('jQuestionUrl').value = item.link;
     document.getElementById('jEditorCard').style.display = 'none';
-    document.getElementById('jQuestion').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('jQuestionTitle').closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    try {
+      const res = await fetch('/api/jisikinn/fetch_question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: item.link })
+      });
+      const data = await res.json();
+      if (data.error) {
+        document.getElementById('jQuestion').value = item.description ? item.description.replace(/<[^>]+>/g, '') : '';
+        document.getElementById('jFetchStatus').textContent = '(전문 로딩 실패 - 미리보기만 표시)';
+      } else {
+        if (data.title) document.getElementById('jQuestionTitle').value = data.title;
+        document.getElementById('jQuestion').value = data.body || '';
+        document.getElementById('jFetchStatus').textContent = '✓ 전문 로딩 완료';
+        setTimeout(() => { document.getElementById('jFetchStatus').textContent = ''; }, 3000);
+      }
+    } catch {
+      document.getElementById('jQuestion').value = item.description ? item.description.replace(/<[^>]+>/g, '') : '';
+      document.getElementById('jFetchStatus').textContent = '(전문 로딩 실패)';
+    }
   }
 
   function markJisikinnDone(url, idx) {
     const done = jGetDone();
-    done.add(url);
-    jSaveDone(done);
-
     const row = document.getElementById(`j-row-${idx}`);
     const btn = document.getElementById(`j-done-btn-${idx}`);
-    if (row) row.classList.add('j-done');
-    if (btn) { btn.classList.add('completed'); btn.disabled = true; }
+
+    if (done.has(url)) {
+      // 완료 → 복구
+      done.delete(url);
+      jSaveDone(done);
+      if (row) row.classList.remove('j-done');
+      if (btn) { btn.classList.remove('completed'); btn.textContent = '완료'; }
+    } else {
+      // 미완료 → 완료
+      done.add(url);
+      jSaveDone(done);
+      if (row) row.classList.add('j-done');
+      if (btn) { btn.classList.add('completed'); btn.textContent = '완료'; }
+    }
   }
 
   // ─── 지식인 탭: 로그인 ──────────────────────────────────────
@@ -1654,14 +1681,26 @@
 
   // ─── 지식인 탭: AI 답변 생성 ─────────────────────────────────
 
+  let jAnswerType = 'blog';
+
+  function setJType(type) {
+    jAnswerType = type;
+    document.getElementById('jTypeBlog').className = type === 'blog' ? 'btn' : 'btn btn-gray';
+    document.getElementById('jTypeProduct').className = type === 'product' ? 'btn' : 'btn btn-gray';
+    document.getElementById('jLinkLabel').textContent = type === 'blog' ? '블로그 URL' : '제품 구매 URL';
+    document.getElementById('jCtrLink').placeholder = type === 'blog' ? 'https://blog.naver.com/...' : 'https://...';
+  }
+
   async function generateJisikinn() {
-    const api_key = document.getElementById('jClaudeApiKey').value.trim();
-    const question = document.getElementById('jQuestion').value.trim();
-    const keywords = document.getElementById('jKeywords').value.trim();
-    const style = document.getElementById('jAnswerStyle').value;
+    const api_key = document.getElementById('claudeApiKey').value.trim();
+    const qtitle = document.getElementById('jQuestionTitle').value.trim();
+    const qbody = document.getElementById('jQuestion').value.trim();
+    const question = qtitle && qbody ? `제목: ${qtitle}\n\n내용: ${qbody}` : qtitle || qbody;
+    const link = document.getElementById('jCtrLink').value.trim();
 
     if (!api_key) { showError('jGenerateError', 'Claude API 키를 입력해주세요.'); return; }
     if (!question) { showError('jGenerateError', '질문 내용을 입력해주세요.'); return; }
+    if (!link) { showError('jGenerateError', '링크를 입력해주세요.'); return; }
 
     const btn = document.getElementById('jGenerateBtn');
     btn.disabled = true;
@@ -1672,7 +1711,7 @@
       const res = await fetch('/api/jisikinn/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, keywords, api_key, style })
+        body: JSON.stringify({ question, api_key, answer_type: jAnswerType, link })
       });
       let data;
       try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
@@ -1689,6 +1728,40 @@
       btn.disabled = false;
       btn.textContent = 'AI 답변 생성';
     }
+  }
+
+  function copyJAnswer() {
+    const text = document.getElementById('jAnswerBody').value;
+    if (!text) { showToast('복사할 내용이 없습니다.'); return; }
+    navigator.clipboard.writeText(text).then(() => showToast('답변이 클립보드에 복사되었습니다.'));
+  }
+
+  function openQuestionLink() {
+    const url = document.getElementById('jQuestionUrl').value.trim();
+    if (!url) { showToast('질문 URL이 없습니다.'); return; }
+    window.open(url, '_blank');
+  }
+
+  let ogDebounceTimer = null;
+  function onCtrLinkInput(val) {
+    clearTimeout(ogDebounceTimer);
+    const card = document.getElementById('ogPreviewCard');
+    if (!val || !val.startsWith('http')) { card.style.display = 'none'; return; }
+    ogDebounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/og_preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: val })
+        });
+        const data = await res.json();
+        if (data.error || !data.image) { card.style.display = 'none'; return; }
+        document.getElementById('ogPreviewImg').src = data.image;
+        document.getElementById('ogPreviewTitle').textContent = data.title || '';
+        document.getElementById('ogPreviewDesc').textContent = data.description || '';
+        card.style.display = 'flex';
+      } catch { card.style.display = 'none'; }
+    }, 600);
   }
 
   function updateJCharCount() {
