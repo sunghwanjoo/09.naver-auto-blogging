@@ -4,15 +4,23 @@ import os
 # ── PyInstaller 번들 SSL 인증서 경로 강제 설정 (반드시 requests import 전에 실행) ──
 if getattr(sys, 'frozen', False):
     _cert = os.path.join(sys._MEIPASS, 'certifi', 'cacert.pem')
-    os.environ['REQUESTS_CA_BUNDLE'] = _cert
-    os.environ['SSL_CERT_FILE'] = _cert
-    os.environ['CURL_CA_BUNDLE'] = _cert
-    # certifi.where() 도 번들 경로로 패치
-    try:
-        import certifi as _certifi
-        _certifi.where = lambda: _cert
-    except Exception:
-        pass
+    if not os.path.exists(_cert):
+        # collect_all('certifi')가 certifi 패키지 내부에 포함한 경우 시도
+        import glob as _glob
+        _candidates = _glob.glob(os.path.join(sys._MEIPASS, '**', 'cacert.pem'), recursive=True)
+        if _candidates:
+            _cert = _candidates[0]
+    if os.path.exists(_cert):
+        os.environ['REQUESTS_CA_BUNDLE'] = _cert
+        os.environ['SSL_CERT_FILE'] = _cert
+        os.environ['CURL_CA_BUNDLE'] = _cert
+        try:
+            import certifi as _certifi
+            _certifi.where = lambda: _cert
+            if hasattr(_certifi, 'core'):
+                _certifi.core.where = lambda: _cert
+        except Exception:
+            pass
 
 import time
 import json
@@ -52,7 +60,11 @@ NAVER_CLIENT_SECRET = 'rJgAOskYL0'
 # 업로드 작업 상태 저장
 upload_status = {}
 
-CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+# exe 실행 시 sys.executable 기준, 소스 실행 시 __file__ 기준으로 config.json 경로 설정
+if getattr(sys, 'frozen', False):
+    CONFIG_FILE = os.path.join(os.path.dirname(sys.executable), 'config.json')
+else:
+    CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
 
 
 def generate_signature(timestamp, method, uri):
@@ -227,6 +239,13 @@ def blog_generate():
     api_key = data.get('api_key', '').strip()
     style = data.get('style', '정보성')
 
+    if not api_key:
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                api_key = json.load(f).get('claude_api_key', '').strip()
+        except Exception:
+            pass
+
     if not topic:
         return jsonify({'error': '주제를 입력해주세요.'}), 400
     if not api_key:
@@ -378,6 +397,13 @@ def jisikinn_generate():
     api_key = data.get('api_key', '').strip()
     answer_type = data.get('answer_type', 'blog')
     link = data.get('link', '').strip()
+
+    if not api_key:
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                api_key = json.load(f).get('claude_api_key', '').strip()
+        except Exception:
+            pass
 
     if not question:
         return jsonify({'error': '질문 내용을 입력해주세요.'}), 400

@@ -1,7 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
+import certifi as _certifi_mod
 
-datas = [('templates', 'templates'), ('C:\\Users\\jusin\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\certifi', 'certifi')]
+datas = [('templates', 'templates'), (_certifi_mod.where(), 'certifi')]
 binaries = []
 hiddenimports = ['naver_bot', 'waitress']
 tmp_ret = collect_all('anthropic')

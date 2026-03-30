@@ -1698,7 +1698,6 @@
     const question = qtitle && qbody ? `제목: ${qtitle}\n\n내용: ${qbody}` : qtitle || qbody;
     const link = document.getElementById('jCtrLink').value.trim();
 
-    if (!api_key) { showError('jGenerateError', 'Claude API 키를 입력해주세요.'); return; }
     if (!question) { showError('jGenerateError', '질문 내용을 입력해주세요.'); return; }
     if (!link) { showError('jGenerateError', '링크를 입력해주세요.'); return; }
 
