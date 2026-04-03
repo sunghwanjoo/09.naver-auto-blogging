@@ -2,12 +2,11 @@
 from PyInstaller.utils.hooks import collect_all
 import certifi as _certifi_mod
 
+# certifi.where()로 cacert.pem 경로를 직접 지정 (collect_all 중복 방지)
 datas = [('templates', 'templates'), (_certifi_mod.where(), 'certifi')]
 binaries = []
 hiddenimports = ['naver_bot', 'waitress']
 tmp_ret = collect_all('anthropic')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('certifi')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('selenium')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]

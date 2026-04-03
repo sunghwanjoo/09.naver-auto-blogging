@@ -21,6 +21,28 @@ if getattr(sys, 'frozen', False):
                 _certifi.core.where = lambda: _cert
         except Exception:
             pass
+    else:
+        # cacert.pem이 번들에 없는 경우 — certifi.where()가 잘못된 경로를 반환하지 못하도록 패치
+        # 환경변수도 잘못된 경로로 세팅되어 있으면 제거
+        for _ev in ('REQUESTS_CA_BUNDLE', 'SSL_CERT_FILE', 'CURL_CA_BUNDLE'):
+            os.environ.pop(_ev, None)
+        try:
+            import certifi as _certifi
+            import ssl as _ssl
+            # Python ssl 모듈의 기본 CA 경로 사용 (Windows 인증서 저장소 등)
+            _sys_ca = _ssl.get_default_verify_paths().cafile
+            if _sys_ca and os.path.exists(_sys_ca):
+                _certifi.where = lambda: _sys_ca
+                if hasattr(_certifi, 'core'):
+                    _certifi.core.where = lambda: _sys_ca
+            else:
+                # ssl 기본 CA도 없으면 certifi.where()를 None 반환으로 막음
+                # requests는 None이면 자체 ssl 컨텍스트(Windows 인증서 저장소)를 사용
+                _certifi.where = lambda: None
+                if hasattr(_certifi, 'core'):
+                    _certifi.core.where = lambda: None
+        except Exception:
+            pass
 
 import time
 import json
@@ -338,11 +360,29 @@ def upload_job_status(job_id):
 
 # ─── 지식인 질문 검색 ────────────────────────────────────────
 
+def _jisikinn_title_filter(items, keyword):
+    """제목에 검색어 첫 단어(또는 첫 글자)가 없는 항목 제거."""
+    import re
+
+    # 공백이 있으면 첫 단어, 없으면 첫 글자 사용
+    parts = keyword.split()
+    first_word = parts[0] if len(parts) > 1 else keyword[0]
+
+    filtered = []
+    for item in items:
+        raw_title = item.get('title', '')
+        title = re.sub(r'<[^>]+>', '', raw_title)
+        if first_word in title:
+            filtered.append(item)
+    return filtered
+
+
 @app.route('/api/jisikinn/search', methods=['POST'])
 def jisikinn_search():
     data = request.json or {}
     keyword = data.get('keyword', '').strip()
     display = min(int(data.get('display', 20)), 100)
+    start = max(1, int(data.get('start', 1)))
 
     if not keyword:
         return jsonify({'error': '키워드를 입력해주세요.'}), 400
@@ -350,7 +390,7 @@ def jisikinn_search():
     try:
         resp = requests.get(
             'https://openapi.naver.com/v1/search/kin.json',
-            params={'query': keyword, 'display': display, 'sort': 'date'},
+            params={'query': keyword, 'display': display, 'sort': 'date', 'start': start},
             headers={
                 'X-Naver-Client-Id': NAVER_CLIENT_ID,
                 'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
@@ -359,7 +399,15 @@ def jisikinn_search():
         )
         resp.raise_for_status()
         result = resp.json()
-        return jsonify({'items': result.get('items', []), 'total': result.get('total', 0)})
+        items = result.get('items', [])
+        filtered = _jisikinn_title_filter(items, keyword)
+        return jsonify({
+            'items': filtered,
+            'total': result.get('total', 0),
+            'fetched': len(items),
+            'filtered_out': len(items) - len(filtered),
+            'next_start': start + display
+        })
 
     except requests.exceptions.HTTPError as e:
         try:

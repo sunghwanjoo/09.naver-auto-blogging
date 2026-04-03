@@ -822,6 +822,11 @@
             <tbody id="jTableBody"></tbody>
           </table>
         </div>
+        <div style="text-align:center; margin-top:14px" id="jLoadMoreWrap">
+          <button class="btn btn-gray" id="jLoadMoreBtn" onclick="loadMoreJisikinn()" style="padding:9px 28px; font-size:13px">
+            + 더 불러오기
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1486,9 +1491,14 @@
     localStorage.setItem(J_DONE_KEY, JSON.stringify([...set]));
   }
 
+  let jItems = [];
+  let jCurrentKeyword = '';
+  let jNextStart = 1;
+  let jDisplayCount = 20;
+
   async function searchJisikinn() {
     const keyword = document.getElementById('jSearchKeyword').value.trim();
-    const display = document.getElementById('jDisplayCount').value;
+    const display = parseInt(document.getElementById('jDisplayCount').value);
 
     if (!keyword) { showError('jSearchError', '키워드를 입력해주세요.'); return; }
 
@@ -1498,16 +1508,23 @@
     hideMsg('jSearchError');
     document.getElementById('jSearchResults').style.display = 'none';
 
+    // 새 검색 시 초기화
+    jItems = [];
+    jCurrentKeyword = keyword;
+    jDisplayCount = display;
+    jNextStart = 1;
+
     try {
       const res = await fetch('/api/jisikinn/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, display: parseInt(display) })
+        body: JSON.stringify({ keyword, display, start: 1 })
       });
       let data;
       try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
       if (data.error) { showError('jSearchError', data.error); return; }
-      renderJisikinnResults(data.items, keyword);
+      jNextStart = data.next_start;
+      appendJisikinnResults(data.items, true);
     } catch (e) {
       showError('jSearchError', e.message || '서버 오류가 발생했습니다.');
     } finally {
@@ -1516,28 +1533,61 @@
     }
   }
 
-  function renderJisikinnResults(items, keyword) {
+  async function loadMoreJisikinn() {
+    const btn = document.getElementById('jLoadMoreBtn');
+    btn.disabled = true;
+    btn.textContent = '불러오는 중...';
+
+    try {
+      const res = await fetch('/api/jisikinn/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: jCurrentKeyword, display: jDisplayCount, start: jNextStart })
+      });
+      let data;
+      try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
+      if (data.error) { showError('jSearchError', data.error); return; }
+      jNextStart = data.next_start;
+      appendJisikinnResults(data.items, false);
+    } catch (e) {
+      showError('jSearchError', e.message || '서버 오류가 발생했습니다.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '+ 더 불러오기';
+    }
+  }
+
+  function appendJisikinnResults(newItems, reset) {
     const done = jGetDone();
     const tbody = document.getElementById('jTableBody');
     const info = document.getElementById('jResultInfo');
 
-    info.textContent = `"${keyword}" 검색 결과 ${items.length}개`;
+    if (reset) {
+      jItems = newItems;
+      tbody.innerHTML = '';
+    } else {
+      // 중복 제거 후 추가
+      const existingLinks = new Set(jItems.map(i => i.link));
+      const unique = newItems.filter(i => !existingLinks.has(i.link));
+      jItems = [...jItems, ...unique];
+      newItems = unique;
+    }
 
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#aaa; padding:24px">검색 결과가 없습니다.</td></tr>';
+    if (reset && !jItems.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:24px">검색 결과가 없습니다.</td></tr>';
+      document.getElementById('jLoadMoreWrap').style.display = 'none';
       document.getElementById('jSearchResults').style.display = 'block';
       return;
     }
 
-    jItems = items;
-
-    tbody.innerHTML = items.map((item, i) => {
+    const startIdx = jItems.length - newItems.length;
+    tbody.innerHTML += newItems.map((item, i) => {
+      const idx = startIdx + i;
       const isDone = done.has(item.link);
       const cleanTitle = item.title.replace(/<[^>]+>/g, '');
       const cleanDesc = item.description ? item.description.replace(/<[^>]+>/g, '') : '';
-      const date = item.pubDate ? item.pubDate.replace(/\s.*/, '') : '-';
-      return `<tr class="${isDone ? 'j-done' : ''}" id="j-row-${i}">
-        <td style="color:#aaa; font-size:12px">${i + 1}</td>
+      return `<tr class="${isDone ? 'j-done' : ''}" id="j-row-${idx}">
+        <td style="color:#aaa; font-size:12px">${idx + 1}</td>
         <td>
           <span class="q-title">${cleanTitle}</span>
           ${cleanDesc ? `<div style="color:#888; font-size:11px; margin-top:3px; line-height:1.4">${cleanDesc}</div>` : ''}
@@ -1546,21 +1596,21 @@
           <a href="${item.link}" target="_blank" style="color:#03c75a; font-size:18px; text-decoration:none" title="질문 보기">↗</a>
         </td>
         <td style="text-align:center">
-          <button class="btn-write" onclick="selectJisikinnQuestion(${i})">작성</button>
+          <button class="btn-write" onclick="selectJisikinnQuestion(${idx})">작성</button>
         </td>
         <td>
-          <button class="btn-done ${isDone ? 'completed' : ''}" id="j-done-btn-${i}"
-            onclick="markJisikinnDone('${item.link}', ${i})">
+          <button class="btn-done ${isDone ? 'completed' : ''}" id="j-done-btn-${idx}"
+            onclick="markJisikinnDone('${item.link}', ${idx})">
             완료
           </button>
         </td>
       </tr>`;
     }).join('');
 
+    info.textContent = `"${jCurrentKeyword}" 검색 결과 ${jItems.length}개`;
+    document.getElementById('jLoadMoreWrap').style.display = newItems.length ? 'block' : 'none';
     document.getElementById('jSearchResults').style.display = 'block';
   }
-
-  let jItems = [];
 
   async function selectJisikinnQuestion(idx) {
     const item = jItems[idx];
