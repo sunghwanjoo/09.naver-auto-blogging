@@ -569,6 +569,48 @@
     .btn-write:hover { background: #02a84a; }
     .j-result-info { font-size: 12px; color: #888; margin-top: 8px; }
 
+    /* ── 지식인 작업 카드 누적 ── */
+    .j-work-card {
+      border-left: 4px solid #03c75a;
+      animation: jwcSlideIn 0.22s ease;
+    }
+    @keyframes jwcSlideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .j-work-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .j-work-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    .j-work-url {
+      font-size: 12px;
+      color: #03c75a;
+      text-decoration: none;
+    }
+    .j-work-url:hover { text-decoration: underline; }
+    .j-work-close {
+      background: none;
+      border: none;
+      color: #bbb;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .j-work-close:hover { color: #e84c3d; }
+    .j-work-card.j-work-done { border-left-color: #4caf50; }
+
     /* ── 반응형 ── */
     @media (max-width: 768px) {
       .keyword-wrap { padding: 0 12px; }
@@ -830,77 +872,8 @@
       </div>
     </div>
 
-    <!-- STEP 3: Claude API 키 + 답변 생성 -->
-    <div class="card">
-      <div class="section-title">
-        <span class="step-label">STEP 3</span> AI 지식인 답변 생성
-      </div>
-
-      <div class="field" style="margin-bottom:10px">
-        <label>질문 제목</label>
-        <input type="text" id="jQuestionTitle" placeholder="질문을 선택하면 자동으로 입력됩니다" readonly style="background:#f9f9f9; color:#555" />
-      </div>
-
-      <div class="field" style="margin-bottom:12px">
-        <label>질문 내용 <span id="jFetchStatus" style="font-size:12px; color:#03c75a; font-weight:400"></span></label>
-        <textarea id="jQuestion" placeholder="질문을 선택하면 전문이 자동으로 입력됩니다" style="min-height:100px; resize:vertical"></textarea>
-      </div>
-
-      <div style="margin-bottom:12px">
-        <label style="font-size:13px; font-weight:600; color:#444; display:block; margin-bottom:8px">답변 유형</label>
-        <div style="display:flex; gap:8px">
-          <button type="button" id="jTypeBlog" class="btn" onclick="setJType('blog')" style="flex:1">블로그 유도형</button>
-          <button type="button" id="jTypeProduct" class="btn btn-gray" onclick="setJType('product')" style="flex:1">제품 판매형</button>
-        </div>
-      </div>
-
-      <div class="field" style="margin-bottom:16px">
-        <label id="jLinkLabel">블로그 URL</label>
-        <input type="text" id="jCtrLink" placeholder="https://" oninput="onCtrLinkInput(this.value)" onpaste="setTimeout(()=>onCtrLinkInput(this.value),100)" />
-        <div id="ogPreviewCard" style="display:none; margin-top:10px; border:1px solid #dde3ea; border-radius:10px; overflow:hidden; background:#fff; flex-direction:row; max-height:100px">
-          <img id="ogPreviewImg" src="" alt="" style="width:100px; height:100px; object-fit:cover; flex-shrink:0" />
-          <div style="padding:10px 12px; overflow:hidden">
-            <div id="ogPreviewTitle" style="font-size:13px; font-weight:600; color:#222; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis"></div>
-            <div id="ogPreviewDesc" style="font-size:11px; color:#888; line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden"></div>
-          </div>
-        </div>
-      </div>
-
-      <button class="btn" id="jGenerateBtn" onclick="generateJisikinn()">AI 답변 생성</button>
-      <div class="error-msg" id="jGenerateError"></div>
-    </div>
-
-    <!-- STEP 4: 수정 후 업로드 -->
-    <div class="card" id="jEditorCard" style="display:none">
-      <div class="section-title">
-        <span class="step-label">STEP 4</span> 수정 후 답변 등록
-      </div>
-
-      <div class="field" style="margin-bottom:12px">
-        <label>지식인 질문 URL</label>
-        <input type="text" id="jQuestionUrl" placeholder="https://kin.naver.com/qna/detail.naver?d1id=..." />
-      </div>
-
-      <div class="field">
-        <label>답변 내용 <span style="color:#aaa; font-weight:400">(직접 수정 가능)</span></label>
-        <textarea id="jAnswerBody" class="editor-area" oninput="updateJCharCount()" placeholder="답변 내용..."></textarea>
-        <div class="char-count" id="jCharCount">0자</div>
-      </div>
-
-      <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap">
-        <button class="btn" id="jUploadBtn" onclick="uploadJisikinn()">답변 등록</button>
-        <button class="btn btn-gray" onclick="generateJisikinn()">다시 생성</button>
-        <button class="btn btn-gray" onclick="copyJAnswer()">답변 복사</button>
-        <button class="btn btn-gray" onclick="openQuestionLink()">질문 열기 ↗</button>
-      </div>
-
-      <div class="upload-progress" id="jUploadProgress">
-        <div class="spinner"></div>
-        <span id="jUploadProgressText">브라우저를 열고 지식인에 답변 등록 중...</span>
-      </div>
-      <div class="error-msg" id="jUploadError"></div>
-      <div class="success-msg" id="jUploadSuccess"></div>
-    </div>
+    <!-- 작업 카드 누적 영역 -->
+    <div id="jWorkArea"></div>
 
   </div>
 </div>
@@ -1612,17 +1585,27 @@
     document.getElementById('jSearchResults').style.display = 'block';
   }
 
+  // ─── 지식인 작업 카드 누적 시스템 ──────────────────────────────
+
+  const jWorkCards = {}; // {cardId: {type, questionUrl, question, title, ogTimer}}
+
   async function selectJisikinnQuestion(idx) {
     const item = jItems[idx];
     const title = item.title.replace(/<[^>]+>/g, '');
+    const cardId = 'jwc_' + Date.now();
 
-    document.getElementById('jQuestionTitle').value = title;
-    document.getElementById('jQuestion').value = '';
-    document.getElementById('jFetchStatus').textContent = '전문 불러오는 중...';
-    document.getElementById('jQuestionUrl').value = item.link;
-    document.getElementById('jEditorCard').style.display = 'none';
-    document.getElementById('jQuestionTitle').closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const qType = item.link.includes('/faq/') ? 'FAQ' : '일반';
+    jWorkCards[cardId] = { type: 'blog', questionUrl: item.link, question: '', title, ogTimer: null };
 
+    const card = document.createElement('div');
+    card.className = 'card j-work-card';
+    card.id = cardId;
+    card.innerHTML = buildWorkCardHTML(cardId, title, item.link, qType);
+    document.getElementById('jWorkArea').appendChild(card);
+
+    // 질문 전문 비동기 로딩
+    const statusEl = document.getElementById(cardId + '_fetchStatus');
+    if (statusEl) statusEl.textContent = '전문 불러오는 중...';
     try {
       const res = await fetch('/api/jisikinn/fetch_question', {
         method: 'POST',
@@ -1630,19 +1613,232 @@
         body: JSON.stringify({ url: item.link })
       });
       const data = await res.json();
+      const qView = document.getElementById(cardId + '_questionView');
       if (data.error) {
-        document.getElementById('jQuestion').value = item.description ? item.description.replace(/<[^>]+>/g, '') : '';
-        document.getElementById('jFetchStatus').textContent = '(전문 로딩 실패 - 미리보기만 표시)';
+        const fallback = item.description ? item.description.replace(/<[^>]+>/g, '') : '';
+        jWorkCards[cardId].question = fallback;
+        if (qView) qView.value = fallback;
+        if (statusEl) statusEl.textContent = '(전문 로딩 실패)';
       } else {
-        if (data.title) document.getElementById('jQuestionTitle').value = data.title;
-        document.getElementById('jQuestion').value = data.body || '';
-        document.getElementById('jFetchStatus').textContent = '✓ 전문 로딩 완료';
-        setTimeout(() => { document.getElementById('jFetchStatus').textContent = ''; }, 3000);
+        if (data.title) jWorkCards[cardId].title = data.title;
+        jWorkCards[cardId].question = data.body || '';
+        if (qView) qView.value = data.body || '';
+        if (statusEl) { statusEl.textContent = '✓ 전문 로딩 완료'; setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000); }
       }
     } catch {
-      document.getElementById('jQuestion').value = item.description ? item.description.replace(/<[^>]+>/g, '') : '';
-      document.getElementById('jFetchStatus').textContent = '(전문 로딩 실패)';
+      const fallback = item.description ? item.description.replace(/<[^>]+>/g, '') : '';
+      jWorkCards[cardId].question = fallback;
+      const qView = document.getElementById(cardId + '_questionView');
+      if (qView) qView.value = fallback;
+      if (statusEl) statusEl.textContent = '(전문 로딩 실패)';
     }
+  }
+
+  function buildWorkCardHTML(cardId, title, url, qType) {
+    const isFaq = qType === 'FAQ';
+    const badge = isFaq
+      ? `<span style="display:inline-block;background:#ff6b35;color:white;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:8px;vertical-align:middle">FAQ</span>`
+      : `<span style="display:inline-block;background:#1a73e8;color:white;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-left:8px;vertical-align:middle">일반</span>`;
+    return `
+      <div class="j-work-card-header">
+        <div style="flex:1; min-width:0">
+          <div class="j-work-title">${escHtml(title)}${badge}</div>
+          <a href="${escHtml(url)}" target="_blank" class="j-work-url">↗ 질문 보기</a>
+          <span id="${cardId}_fetchStatus" style="font-size:12px; color:#03c75a; font-weight:400; margin-left:8px"></span>
+        </div>
+        <button class="j-work-close" onclick="removeWorkCard('${cardId}')" title="카드 닫기">✕</button>
+      </div>
+
+      <div class="field" style="margin-bottom:14px">
+        <label>질문 내용</label>
+        <textarea id="${cardId}_questionView" style="min-height:80px; resize:vertical; background:#f9f9f9; color:#555; font-size:13px" readonly placeholder="질문 전문을 불러오는 중..."></textarea>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-size:13px; font-weight:600; color:#444; display:block; margin-bottom:8px">답변 유형</label>
+        <div style="display:flex; gap:8px">
+          <button type="button" id="${cardId}_typeBlog" class="btn" onclick="setCardType('${cardId}','blog')" style="flex:1">블로그 유도형</button>
+          <button type="button" id="${cardId}_typeProduct" class="btn btn-gray" onclick="setCardType('${cardId}','product')" style="flex:1">제품 판매형</button>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:16px">
+        <label id="${cardId}_linkLabel">블로그 URL</label>
+        <input type="text" id="${cardId}_link" placeholder="https://blog.naver.com/..."
+          oninput="onCardLinkInput('${cardId}',this.value)"
+          onpaste="setTimeout(()=>onCardLinkInput('${cardId}',document.getElementById('${cardId}_link').value),100)" />
+        <div id="${cardId}_og" style="display:none; margin-top:10px; border:1px solid #dde3ea; border-radius:10px; overflow:hidden; background:#fff; flex-direction:row; max-height:100px">
+          <img id="${cardId}_ogImg" src="" alt="" style="width:100px; height:100px; object-fit:cover; flex-shrink:0" />
+          <div style="padding:10px 12px; overflow:hidden">
+            <div id="${cardId}_ogTitle" style="font-size:13px; font-weight:600; color:#222; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis"></div>
+            <div id="${cardId}_ogDesc" style="font-size:11px; color:#888; line-height:1.5; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn" id="${cardId}_genBtn" onclick="generateWorkCard('${cardId}')">AI 답변 생성</button>
+      <div class="error-msg" id="${cardId}_genErr"></div>
+
+      <div id="${cardId}_editor" style="display:none; margin-top:16px">
+        <div class="field">
+          <label>답변 내용 <span style="color:#aaa; font-weight:400">(직접 수정 가능)</span></label>
+          <textarea id="${cardId}_answer" class="editor-area" style="min-height:200px"
+            oninput="updateCardCharCount('${cardId}')"></textarea>
+          <div class="char-count" id="${cardId}_count">0자</div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap">
+          <button class="btn" id="${cardId}_uploadBtn" onclick="uploadWorkCard('${cardId}')">답변 등록</button>
+          <button class="btn btn-gray" onclick="generateWorkCard('${cardId}')">다시 생성</button>
+          <button class="btn btn-gray" onclick="copyWorkCard('${cardId}')">복사</button>
+          <button class="btn btn-gray" onclick="window.open('${escHtml(url)}','_blank')">질문 열기 ↗</button>
+        </div>
+        <div class="upload-progress" id="${cardId}_progress">
+          <div class="spinner"></div>
+          <span>브라우저를 열고 지식인에 답변 등록 중...</span>
+        </div>
+        <div class="error-msg" id="${cardId}_uploadErr"></div>
+        <div class="success-msg" id="${cardId}_uploadSucc"></div>
+      </div>`;
+  }
+
+  function setCardType(cardId, type) {
+    if (!jWorkCards[cardId]) return;
+    jWorkCards[cardId].type = type;
+    document.getElementById(cardId + '_typeBlog').className = type === 'blog' ? 'btn' : 'btn btn-gray';
+    document.getElementById(cardId + '_typeProduct').className = type === 'product' ? 'btn' : 'btn btn-gray';
+    document.getElementById(cardId + '_linkLabel').textContent = type === 'blog' ? '블로그 URL' : '제품 구매 URL';
+    document.getElementById(cardId + '_link').placeholder = type === 'blog' ? 'https://blog.naver.com/...' : 'https://...';
+  }
+
+  function onCardLinkInput(cardId, val) {
+    const state = jWorkCards[cardId];
+    if (!state) return;
+    clearTimeout(state.ogTimer);
+    const ogEl = document.getElementById(cardId + '_og');
+    if (!val || !val.startsWith('http')) { ogEl.style.display = 'none'; return; }
+    state.ogTimer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/og_preview', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: val })
+        });
+        const data = await res.json();
+        if (data.error || !data.image) { ogEl.style.display = 'none'; return; }
+        document.getElementById(cardId + '_ogImg').src = data.image;
+        document.getElementById(cardId + '_ogTitle').textContent = data.title || '';
+        document.getElementById(cardId + '_ogDesc').textContent = data.description || '';
+        ogEl.style.display = 'flex';
+      } catch { ogEl.style.display = 'none'; }
+    }, 600);
+  }
+
+  async function generateWorkCard(cardId) {
+    const state = jWorkCards[cardId];
+    if (!state) return;
+    const link = document.getElementById(cardId + '_link').value.trim();
+    const fullQuestion = state.title && state.question
+      ? `제목: ${state.title}\n\n내용: ${state.question}`
+      : state.title || state.question;
+
+    if (!fullQuestion) { showCardMsg(cardId, 'genErr', '질문 내용을 불러오는 중입니다. 잠시 후 다시 시도해주세요.', 'error'); return; }
+    if (!link) { showCardMsg(cardId, 'genErr', '링크를 입력해주세요.', 'error'); return; }
+
+    const api_key = document.getElementById('claudeApiKey').value.trim();
+    if (!api_key) { showCardMsg(cardId, 'genErr', 'Claude API 키가 없습니다. 블로그 탭 설정에서 확인해주세요.', 'error'); return; }
+
+    const btn = document.getElementById(cardId + '_genBtn');
+    btn.disabled = true; btn.textContent = 'AI 답변 생성 중...';
+    document.getElementById(cardId + '_genErr').style.display = 'none';
+
+    try {
+      const res = await fetch('/api/jisikinn/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: fullQuestion, api_key, answer_type: state.type, link })
+      });
+      let data;
+      try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
+      if (data.error) { showCardMsg(cardId, 'genErr', data.error, 'error'); return; }
+      document.getElementById(cardId + '_answer').value = data.answer;
+      document.getElementById(cardId + '_editor').style.display = 'block';
+      updateCardCharCount(cardId);
+    } catch (e) {
+      showCardMsg(cardId, 'genErr', e.message || '서버 오류가 발생했습니다.', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'AI 답변 생성';
+    }
+  }
+
+  function updateCardCharCount(cardId) {
+    const el = document.getElementById(cardId + '_answer');
+    const cnt = document.getElementById(cardId + '_count');
+    if (el && cnt) cnt.textContent = `${el.value.length.toLocaleString()}자`;
+  }
+
+  function copyWorkCard(cardId) {
+    const text = document.getElementById(cardId + '_answer').value;
+    if (!text) { showToast('복사할 내용이 없습니다.'); return; }
+    navigator.clipboard.writeText(text).then(() => showToast('답변이 클립보드에 복사되었습니다.'));
+  }
+
+  async function uploadWorkCard(cardId) {
+    const state = jWorkCards[cardId];
+    if (!state) return;
+    const answer = document.getElementById(cardId + '_answer').value.trim();
+    if (!answer) { showCardMsg(cardId, 'uploadErr', '답변 내용을 입력해주세요.', 'error'); return; }
+
+    const btn = document.getElementById(cardId + '_uploadBtn');
+    btn.disabled = true;
+    document.getElementById(cardId + '_uploadErr').style.display = 'none';
+    document.getElementById(cardId + '_uploadSucc').style.display = 'none';
+    document.getElementById(cardId + '_progress').style.display = 'flex';
+
+    try {
+      const res = await fetch('/api/jisikinn/upload', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question_url: state.questionUrl, answer })
+      });
+      let data;
+      try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
+      if (!data.success) {
+        document.getElementById(cardId + '_progress').style.display = 'none';
+        showCardMsg(cardId, 'uploadErr', data.error, 'error');
+        btn.disabled = false; return;
+      }
+      const jobId = data.job_id;
+      const poll = setInterval(async () => {
+        const sRes = await fetch(`/api/jisikinn/upload/status/${jobId}`);
+        const sData = await sRes.json();
+        if (sData.status === 'done') {
+          clearInterval(poll);
+          document.getElementById(cardId + '_progress').style.display = 'none';
+          showCardMsg(cardId, 'uploadSucc', sData.message || '답변 등록 완료!', 'success');
+          document.getElementById(cardId).classList.add('j-work-done');
+          btn.disabled = false;
+        } else if (sData.status === 'error') {
+          clearInterval(poll);
+          document.getElementById(cardId + '_progress').style.display = 'none';
+          showCardMsg(cardId, 'uploadErr', sData.message, 'error');
+          btn.disabled = false;
+        }
+      }, 2000);
+    } catch (e) {
+      document.getElementById(cardId + '_progress').style.display = 'none';
+      showCardMsg(cardId, 'uploadErr', e.message || '서버 오류가 발생했습니다.', 'error');
+      btn.disabled = false;
+    }
+  }
+
+  function removeWorkCard(cardId) {
+    const card = document.getElementById(cardId);
+    if (card) card.remove();
+    delete jWorkCards[cardId];
+  }
+
+  function showCardMsg(cardId, suffix, msg, type) {
+    const el = document.getElementById(cardId + '_' + suffix);
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
   }
 
   function markJisikinnDone(url, idx) {
@@ -1729,145 +1925,7 @@
     checkJLoginStatus();
   }
 
-  // ─── 지식인 탭: AI 답변 생성 ─────────────────────────────────
-
-  let jAnswerType = 'blog';
-
-  function setJType(type) {
-    jAnswerType = type;
-    document.getElementById('jTypeBlog').className = type === 'blog' ? 'btn' : 'btn btn-gray';
-    document.getElementById('jTypeProduct').className = type === 'product' ? 'btn' : 'btn btn-gray';
-    document.getElementById('jLinkLabel').textContent = type === 'blog' ? '블로그 URL' : '제품 구매 URL';
-    document.getElementById('jCtrLink').placeholder = type === 'blog' ? 'https://blog.naver.com/...' : 'https://...';
-  }
-
-  async function generateJisikinn() {
-    const api_key = document.getElementById('claudeApiKey').value.trim();
-    const qtitle = document.getElementById('jQuestionTitle').value.trim();
-    const qbody = document.getElementById('jQuestion').value.trim();
-    const question = qtitle && qbody ? `제목: ${qtitle}\n\n내용: ${qbody}` : qtitle || qbody;
-    const link = document.getElementById('jCtrLink').value.trim();
-
-    if (!question) { showError('jGenerateError', '질문 내용을 입력해주세요.'); return; }
-    if (!link) { showError('jGenerateError', '링크를 입력해주세요.'); return; }
-
-    const btn = document.getElementById('jGenerateBtn');
-    btn.disabled = true;
-    btn.textContent = 'AI 답변 생성 중...';
-    hideMsg('jGenerateError');
-
-    try {
-      const res = await fetch('/api/jisikinn/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, api_key, answer_type: jAnswerType, link })
-      });
-      let data;
-      try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
-
-      if (data.error) { showError('jGenerateError', data.error); return; }
-
-      document.getElementById('jAnswerBody').value = data.answer;
-      document.getElementById('jEditorCard').style.display = 'block';
-      updateJCharCount();
-      document.getElementById('jEditorCard').scrollIntoView({ behavior: 'smooth' });
-    } catch (e) {
-      showError('jGenerateError', e.message || '서버 오류가 발생했습니다.');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'AI 답변 생성';
-    }
-  }
-
-  function copyJAnswer() {
-    const text = document.getElementById('jAnswerBody').value;
-    if (!text) { showToast('복사할 내용이 없습니다.'); return; }
-    navigator.clipboard.writeText(text).then(() => showToast('답변이 클립보드에 복사되었습니다.'));
-  }
-
-  function openQuestionLink() {
-    const url = document.getElementById('jQuestionUrl').value.trim();
-    if (!url) { showToast('질문 URL이 없습니다.'); return; }
-    window.open(url, '_blank');
-  }
-
-  let ogDebounceTimer = null;
-  function onCtrLinkInput(val) {
-    clearTimeout(ogDebounceTimer);
-    const card = document.getElementById('ogPreviewCard');
-    if (!val || !val.startsWith('http')) { card.style.display = 'none'; return; }
-    ogDebounceTimer = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/og_preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: val })
-        });
-        const data = await res.json();
-        if (data.error || !data.image) { card.style.display = 'none'; return; }
-        document.getElementById('ogPreviewImg').src = data.image;
-        document.getElementById('ogPreviewTitle').textContent = data.title || '';
-        document.getElementById('ogPreviewDesc').textContent = data.description || '';
-        card.style.display = 'flex';
-      } catch { card.style.display = 'none'; }
-    }, 600);
-  }
-
-  function updateJCharCount() {
-    const len = document.getElementById('jAnswerBody').value.length;
-    document.getElementById('jCharCount').textContent = `${len.toLocaleString()}자`;
-  }
-
-  // ─── 지식인 탭: 답변 등록 ────────────────────────────────────
-
-  async function uploadJisikinn() {
-    const question_url = document.getElementById('jQuestionUrl').value.trim();
-    const answer = document.getElementById('jAnswerBody').value.trim();
-    if (!question_url) { showError('jUploadError', '지식인 질문 URL을 입력해주세요.'); return; }
-    if (!answer) { showError('jUploadError', '답변 내용을 입력해주세요.'); return; }
-
-    const btn = document.getElementById('jUploadBtn');
-    btn.disabled = true;
-    hideMsg('jUploadError');
-    hideMsg('jUploadSuccess');
-    document.getElementById('jUploadProgress').style.display = 'flex';
-    document.getElementById('jUploadProgressText').textContent = '브라우저를 열고 지식인에 답변 등록 중...';
-
-    try {
-      const res = await fetch('/api/jisikinn/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question_url, answer })
-      });
-      let data;
-      try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
-
-      if (!data.success) { showError('jUploadError', data.error); document.getElementById('jUploadProgress').style.display = 'none'; btn.disabled = false; return; }
-
-      const jobId = data.job_id;
-      const poll = setInterval(async () => {
-        const sRes = await fetch(`/api/jisikinn/upload/status/${jobId}`);
-        const sData = await sRes.json();
-
-        if (sData.status === 'done') {
-          clearInterval(poll);
-          document.getElementById('jUploadProgress').style.display = 'none';
-          showSuccess('jUploadSuccess', sData.message || '답변 등록 완료!');
-          btn.disabled = false;
-        } else if (sData.status === 'error') {
-          clearInterval(poll);
-          document.getElementById('jUploadProgress').style.display = 'none';
-          showError('jUploadError', sData.message);
-          btn.disabled = false;
-        }
-      }, 2000);
-
-    } catch (e) {
-      document.getElementById('jUploadProgress').style.display = 'none';
-      showError('jUploadError', e.message || '서버 오류가 발생했습니다.');
-      btn.disabled = false;
-    }
-  }
+  // ─── 지식인 탭: AI 답변 생성/등록은 카드 시스템으로 통합됨 ───
 
   // ─── 유틸 ─────────────────────────────────────────────────
 
