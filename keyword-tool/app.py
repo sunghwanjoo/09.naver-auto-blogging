@@ -1,6 +1,9 @@
 import sys
 import os
 
+# Vercel 서버리스 환경에서 같은 디렉터리의 naver_bot 모듈을 찾을 수 있도록 경로 추가
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 # ── PyInstaller 번들 SSL 인증서 경로 강제 설정 (반드시 requests import 전에 실행) ──
 if getattr(sys, 'frozen', False):
     _cert = os.path.join(sys._MEIPASS, 'certifi', 'cacert.pem')
