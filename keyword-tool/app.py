@@ -55,7 +55,6 @@ import uuid
 import requests
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, jsonify
-import anthropic
 import naver_bot
 
 # 서버 실행마다 새 세션 토큰 생성 → 브라우저 localStorage 자동 초기화
@@ -227,18 +226,7 @@ def get_keywords():
 
 @app.route('/api/naver/login', methods=['POST'])
 def naver_login():
-    data = request.json or {}
-    naver_id = data.get('naver_id', '').strip()
-    naver_pw = data.get('naver_pw', '').strip()
-    if not naver_id or not naver_pw:
-        return jsonify({'success': False, 'error': 'ID와 비밀번호를 입력해주세요.'}), 400
-
-    try:
-        result = naver_bot.login_naver(naver_id, naver_pw)
-        return jsonify(result)
-    except Exception as e:
-        import traceback
-        return jsonify({'success': False, 'error': str(e), 'detail': traceback.format_exc()}), 500
+    return jsonify({'success': False, 'error': '유료버전입니다. 문의: jusingsing@naver.com'}), 402
 
 
 @app.route('/api/naver/status', methods=['GET'])
@@ -255,101 +243,14 @@ def naver_logout():
 
 @app.route('/api/blog/generate', methods=['POST'])
 def blog_generate():
-    data = request.json or {}
-    topic = data.get('topic', '').strip()
-    keywords = data.get('keywords', '').strip()
-    api_key = data.get('api_key', '').strip()
-    style = data.get('style', '정보성')
-
-    if not api_key:
-        try:
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                api_key = json.load(f).get('claude_api_key', '').strip()
-        except Exception:
-            pass
-
-    if not topic:
-        return jsonify({'error': '주제를 입력해주세요.'}), 400
-    if not api_key:
-        return jsonify({'error': 'Claude API 키를 입력해주세요.'}), 400
-
-    prompt = f"""네이버 블로그 글을 작성해주세요.
-
-주제: {topic}
-{"포함 키워드: " + keywords if keywords else ""}
-글 스타일: {style}
-
-작성 조건:
-- 블로그 제목 1개 (매력적이고 검색에 유리한 제목)
-- 본문은 1500~2000자 내외
-- 소제목을 2~3개 사용해서 구조화
-- 네이버 블로그 독자 친화적인 구어체
-- 마지막에 자연스러운 마무리 문장
-
-출력 형식:
-[제목]
-(제목 내용)
-
-[본문]
-(본문 내용)"""
-
-    try:
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model='claude-sonnet-4-6',
-            max_tokens=2048,
-            messages=[{'role': 'user', 'content': prompt}]
-        )
-        raw = message.content[0].text
-
-        # 제목과 본문 분리
-        title = ''
-        body = raw
-        if '[제목]' in raw and '[본문]' in raw:
-            parts = raw.split('[본문]')
-            body = parts[1].strip()
-            title_part = parts[0].split('[제목]')
-            if len(title_part) > 1:
-                title = title_part[1].strip()
-        elif '\n' in raw:
-            lines = raw.strip().split('\n')
-            title = lines[0].strip()
-            body = '\n'.join(lines[1:]).strip()
-
-        return jsonify({'success': True, 'title': title, 'body': body})
-
-    except anthropic.AuthenticationError:
-        return jsonify({'error': 'API 키가 올바르지 않습니다.'}), 401
-    except Exception as e:
-        return jsonify({'error': f'생성 오류: {str(e)}'}), 500
+    return jsonify({'error': '유료버전입니다. 문의: jusingsing@naver.com'}), 402
 
 
 # ─── 블로그 업로드 ───────────────────────────────────────────
 
 @app.route('/api/blog/upload', methods=['POST'])
 def blog_upload():
-    data = request.json or {}
-    title = data.get('title', '').strip()
-    content = data.get('content', '').strip()
-
-    if not title or not content:
-        return jsonify({'success': False, 'error': '제목과 본문을 입력해주세요.'}), 400
-
-    job_id = str(int(time.time()))
-    upload_status[job_id] = {'status': 'running', 'message': '업로드 중...'}
-
-    def run_upload():
-        result = naver_bot.upload_draft(title, content)
-        upload_status[job_id] = {
-            'status': 'done' if result['success'] else 'error',
-            'message': result.get('message') or result.get('error', '알 수 없는 오류')
-        }
-
-    thread = threading.Thread(target=run_upload)
-    thread.daemon = True
-    thread.start()
-
-    return jsonify({'success': True, 'job_id': job_id})
+    return jsonify({'success': False, 'error': '유료버전입니다. 문의: jusingsing@naver.com'}), 402
 
 
 @app.route('/api/blog/upload/status/<job_id>', methods=['GET'])
@@ -440,83 +341,7 @@ def fetch_question():
 
 @app.route('/api/jisikinn/generate', methods=['POST'])
 def jisikinn_generate():
-    data = request.json or {}
-    question = data.get('question', '').strip()
-    api_key = data.get('api_key', '').strip()
-    answer_type = data.get('answer_type', 'blog')
-    link = data.get('link', '').strip()
-
-    if not api_key:
-        try:
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                api_key = json.load(f).get('claude_api_key', '').strip()
-        except Exception:
-            pass
-
-    if not question:
-        return jsonify({'error': '질문 내용을 입력해주세요.'}), 400
-    if not api_key:
-        return jsonify({'error': 'Claude API 키를 입력해주세요.'}), 400
-    if not link:
-        return jsonify({'error': '링크를 입력해주세요.'}), 400
-
-    if answer_type == 'blog':
-        prompt = f"""너는 네이버 지식인에서 성실하게 답변하는 블로거야.
-아래 질문에 답변을 작성해줘.
-
-질문: {question}
-
-[답변 전략]
-1. 질문자의 상황에 먼저 공감하는 한 줄로 시작
-2. 핵심 정보를 성실하게 제공 (300~400자)
-3. 마지막에 자연스럽게 블로그 링크 삽입
-   - 링크 앞 문장은 "더 자세한 내용은 제가 직접 정리해둔 글이 있으니 참고하세요 :)"처럼 부드럽게
-   - 링크: {link}
-
-[주의사항]
-- 광고처럼 보이면 절대 안 됨
-- 링크는 답변의 보너스처럼 자연스럽게
-- 구어체, 친근한 말투
-- 이모티콘(이모지) 절대 사용 금지
-- ** 같은 마크다운 기호 절대 사용 금지
-- 답변 본문만 출력 (제목, 설명 없이)"""
-
-    else:
-        prompt = f"""너는 네이버 지식인에서 제품을 직접 써본 경험자로서 답변하는 사람이야.
-아래 질문에 답변을 작성해줘.
-
-질문: {question}
-
-[답변 전략]
-1. 질문자의 고민에 공감하는 한 줄로 시작
-2. 제품 고를 때 봐야 할 기준을 성실하게 설명 (200~300자)
-3. 자연스럽게 "저도 이거 쓰는데" 식으로 경험담 연결
-4. 구매 링크를 편의 제공 느낌으로 삽입
-   - 예: "혹시 필요하시면 제가 쓰는 거 링크 남겨드릴게요"
-   - 링크: {link}
-
-[주의사항]
-- 절대 광고처럼 보이면 안 됨
-- 제품명 직접 언급보다 경험담 위주로
-- 구어체, 친근한 말투
-- 이모티콘(이모지) 절대 사용 금지
-- ** 같은 마크다운 기호 절대 사용 금지
-- 답변 본문만 출력 (제목, 설명 없이)"""
-
-    try:
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model='claude-sonnet-4-6',
-            max_tokens=1024,
-            messages=[{'role': 'user', 'content': prompt}]
-        )
-        answer = message.content[0].text.strip()
-        return jsonify({'success': True, 'answer': answer})
-
-    except anthropic.AuthenticationError:
-        return jsonify({'error': 'API 키가 올바르지 않습니다.'}), 401
-    except Exception as e:
-        return jsonify({'error': f'생성 오류: {str(e)}'}), 500
+    return jsonify({'error': '유료버전입니다. 문의: jusingsing@naver.com'}), 402
 
 
 # ─── OG 미리보기 ──────────────────────────────────────────────
@@ -556,28 +381,7 @@ jisikinn_upload_status = {}
 
 @app.route('/api/jisikinn/upload', methods=['POST'])
 def jisikinn_upload():
-    data = request.json or {}
-    question_url = data.get('question_url', '').strip()
-    answer = data.get('answer', '').strip()
-
-    if not question_url or not answer:
-        return jsonify({'success': False, 'error': '질문 URL과 답변 내용을 입력해주세요.'}), 400
-
-    job_id = str(int(time.time()))
-    jisikinn_upload_status[job_id] = {'status': 'running', 'message': '답변 등록 중...'}
-
-    def run_upload():
-        result = naver_bot.upload_jisikinn_answer(question_url, answer)
-        jisikinn_upload_status[job_id] = {
-            'status': 'done' if result['success'] else 'error',
-            'message': result.get('message') or result.get('error', '알 수 없는 오류')
-        }
-
-    thread = threading.Thread(target=run_upload)
-    thread.daemon = True
-    thread.start()
-
-    return jsonify({'success': True, 'job_id': job_id})
+    return jsonify({'success': False, 'error': '유료버전입니다. 문의: jusingsing@naver.com'}), 402
 
 
 @app.route('/api/jisikinn/upload/status/<job_id>', methods=['GET'])

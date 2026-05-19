@@ -2,15 +2,6 @@ import time
 import random
 import pickle
 import os
-import pyperclip
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.service import Service
 
 def _data_dir():
     """쿠키 등 런타임 파일은 exe 옆에 저장 (frozen 여부 무관)"""
@@ -30,19 +21,20 @@ def rand_sleep(min_sec=0.3, max_sec=1.2):
 
 def rand_paste(driver, text):
     """랜덤 방식으로 붙여넣기 (매번 다른 패턴)"""
+    import pyperclip
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.common.action_chains import ActionChains
+
     method = random.choice(['chunk', 'full', 'chunk'])  # chunk 비중 높임
 
     if method == 'full':
-        # 한 번에 전체 붙여넣기
         pyperclip.copy(text)
         rand_sleep(0.2, 0.6)
         ActionChains(driver).key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
         rand_sleep(0.5, 1.0)
 
     else:
-        # 랜덤 크기 청크로 나눠서 붙여넣기
         lines = text.split('\n')
-        # 랜덤하게 2~4줄씩 묶어서 붙여넣기
         i = 0
         while i < len(lines):
             chunk_size = random.randint(2, 5)
@@ -55,6 +47,10 @@ def rand_paste(driver, text):
 
 
 def create_driver(headless=False):
+    from selenium import webdriver
+    from selenium.webdriver.chrome.service import Service
+    from webdriver_manager.chrome import ChromeDriverManager
+
     options = webdriver.ChromeOptions()
     if headless:
         options.add_argument('--headless=new')
@@ -81,6 +77,10 @@ def human_type(element, text):
 
 def login_naver(naver_id, naver_pw):
     """네이버 로그인 후 쿠키 저장"""
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
     driver = create_driver(headless=False)
     try:
         driver.get('https://nid.naver.com/nidlogin.login?mode=form&url=https://www.naver.com')
@@ -168,6 +168,13 @@ def logout_naver():
 
 def upload_draft(title, content):
     """블로그 임시저장 - 사람처럼 복사붙여넣기"""
+    import pyperclip
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.common.action_chains import ActionChains
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
     if not os.path.exists(COOKIES_FILE):
         return {'success': False, 'error': '로그인이 필요합니다.'}
 
@@ -268,6 +275,10 @@ def upload_draft(title, content):
 
 def upload_jisikinn_answer(question_url, answer):
     """지식인 질문에 답변 등록"""
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
     if not os.path.exists(COOKIES_FILE):
         return {'success': False, 'error': '로그인이 필요합니다.'}
 

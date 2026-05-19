@@ -723,18 +723,13 @@
       </div>
     </div>
 
-    <!-- STEP 2: Claude API 키 + 글 생성 -->
+    <!-- STEP 2: AI 블로그 글 생성 -->
     <div class="card">
       <div class="section-title">
         <span class="step-label">STEP 2</span> AI 블로그 글 생성
       </div>
 
-      <div class="api-key-row" style="margin-bottom:16px">
-        <div class="field">
-          <label>Claude API 키</label>
-          <input type="password" id="claudeApiKey" placeholder="sk-ant-..." autocomplete="off" />
-        </div>
-      </div>
+      <input type="hidden" id="claudeApiKey" value="" />
 
       <div class="form-grid" style="margin-bottom:12px">
         <div class="field">
@@ -913,24 +908,9 @@
     }
     renderPlan();
 
-    // Claude API 키 불러오기
-    try {
-      const cfgRes = await fetch('/api/config');
-      const cfg = await cfgRes.json();
-      if (cfg.claude_api_key) document.getElementById('claudeApiKey').value = cfg.claude_api_key;
-    } catch {}
+
   })();
 
-  // Claude API 키 입력 시 자동 저장
-  document.getElementById('claudeApiKey').addEventListener('change', async function() {
-    const key = this.value.trim();
-    if (!key) return;
-    await fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ claude_api_key: key })
-    });
-  });
 
   function loadPlan() {
     try { return JSON.parse(localStorage.getItem(PLAN_KEY) || '[]'); } catch { return []; }
@@ -1358,12 +1338,10 @@
   // ─── 블로그 탭: AI 글 생성 ────────────────────────────────
 
   async function generateBlog() {
-    const api_key = document.getElementById('claudeApiKey').value.trim();
     const topic = document.getElementById('blogTopic').value.trim();
     const keywords = document.getElementById('blogKeywords').value.trim();
     const style = document.getElementById('blogStyle').value;
 
-    if (!api_key) { showError('generateError', 'Claude API 키를 입력해주세요.'); return; }
     if (!topic) { showError('generateError', '주제를 입력해주세요.'); return; }
 
     const btn = document.getElementById('generateBtn');
@@ -1375,7 +1353,7 @@
       const res = await fetch('/api/blog/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, keywords, api_key, style })
+        body: JSON.stringify({ topic, keywords, style })
       });
       let data;
       try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
@@ -1743,9 +1721,6 @@
     if (!fullQuestion) { showCardMsg(cardId, 'genErr', '질문 내용을 불러오는 중입니다. 잠시 후 다시 시도해주세요.', 'error'); return; }
     if (!link) { showCardMsg(cardId, 'genErr', '링크를 입력해주세요.', 'error'); return; }
 
-    const api_key = document.getElementById('claudeApiKey').value.trim();
-    if (!api_key) { showCardMsg(cardId, 'genErr', 'Claude API 키가 없습니다. 블로그 탭 설정에서 확인해주세요.', 'error'); return; }
-
     const btn = document.getElementById(cardId + '_genBtn');
     btn.disabled = true; btn.textContent = 'AI 답변 생성 중...';
     document.getElementById(cardId + '_genErr').style.display = 'none';
@@ -1753,7 +1728,7 @@
     try {
       const res = await fetch('/api/jisikinn/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: fullQuestion, api_key, answer_type: state.type, link })
+        body: JSON.stringify({ question: fullQuestion, answer_type: state.type, link })
       });
       let data;
       try { data = await res.json(); } catch { throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status})`); }
